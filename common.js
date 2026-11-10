@@ -25,4 +25,4 @@ function renderWeek(el,cfg,busy,start,onFree){
       const past=new Date(d.getFullYear(),d.getMonth(),d.getDate(),hr)<now;
       const open=isOpen(cfg,d,hr)&&!past&&!busy.has(k);
       h+=open?`<div class="free" data-k="${k}">Free</div>`:`<div class="busy">–</div>`})}
-  el.innerHTML=h;if(onFree)el.querySelectorAll('.free').forEach(n=>n.onclick=()=>onFree(n.dataset.k))}
+  el.innerHTML=h;el.onclick=e=>{const n=e.target.closest&&e.target.closest('.free');if(n&&onFree)onFree(n.dataset.k)}}

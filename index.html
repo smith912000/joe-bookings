@@ -5,17 +5,18 @@
 <p>Green times are free. Tap one to go to the sign-up form and choose your times.</p>
 <div class="nav"><button class="sec" id="prev">&larr; Earlier</button><b id="range"></b><button class="sec" id="next">Later &rarr;</button></div>
 <div class="legend"><span>Free</span><span>– Not available</span></div>
-<div id="rq" hidden style="border:1px solid var(--line);border-radius:8px;padding:12px;margin:12px 0"><b id="rqt"></b>
+<div id="rq" hidden role="dialog" aria-modal="true" style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);overflow:auto;padding:16px"><div style="background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:14px;max-width:520px;margin:6vh auto"><b id="rqt"></b>
 <p><input id="rn" placeholder="Your name"> <input id="rc" placeholder="Phone or email"></p>
 <p><select id="rh"><option value="1">1 hour</option><option value="2">2 hours</option><option value="3">3 hours</option></select>
 <label><input type="checkbox" id="rf"> I'm flexible on time</label> <label><input type="checkbox" id="rch"> This is a change to an existing booking</label></p>
 <p><input id="rno" placeholder="Anything Joe should know (optional)" style="width:100%"></p><input id="rw" tabindex="-1" autocomplete="off" style="display:none">
-<button id="rs">Send request</button> <button id="rx" class="sec">Cancel</button> <span id="rm" class="note"></span></div>
+<button id="rs">Send request</button> <button id="rx" class="sec">Cancel</button> <span id="rm" class="note"></span>
+<p class="note">We only use your name and contact details to arrange your session with Joe. They are kept in his bookings sheet and not shared with anyone else.</p></div></div>
 <p class="note" id="bnote"></p>
 <div class="grid" id="cal"></div>
 <p class="note" id="upd"></p></main>
 <script src="common.js"></script><script>
-function openForm(k){const q=id=>document.getElementById(id);q('rq').hidden=false;q('rqt').textContent='Request '+k.replace(' ',' at ')+':00';q('rq').dataset.k=k;q('rm').textContent='';q('rq').scrollIntoView({behavior:'smooth'})}
+function openForm(k){const q=id=>document.getElementById(id);q('rq').hidden=false;q('rqt').textContent='Request '+k.replace(' ',' at ')+':00';q('rq').dataset.k=k;q('rm').textContent='';q('rs').disabled=false}
 (async()=>{const cfg=await loadConfig();let b;try{b=await (await fetch(cfg.busy_url||'data/busy.json')).json()}catch(e){b=await (await fetch('data/busy.json')).json()}
 const busy=new Set(b.busy);let w=mondayOf(new Date());const base=new Date(w);
 const draw=()=>{const e=new Date(w);e.setDate(e.getDate()+6);document.getElementById('range').textContent=w.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' – '+e.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
@@ -28,7 +29,7 @@ q('rs').onclick=async()=>{const k=q('rq').dataset.k;if(!q('rn').value.trim()||!q
 try{localStorage.setItem('me',q('rn').value);localStorage.setItem('ct',q('rc').value)}catch(e){}
 q('rm').textContent='Sending...';const note=(q('rf').checked?'Flexible on time. ':'')+q('rno').value;
 try{const r=await fetch(cfg.busy_url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({name:q('rn').value,contact:q('rc').value,slot:k,hours:q('rh').value,note:note,change:q('rch').checked,website:q('rw').value})});
-const j=await r.json();q('rm').textContent=j.ok?'Thanks, your request is with Joe. He will confirm it.':(j.error||'Something went wrong.');if(j.ok)q('rq').querySelector('#rs').disabled=true}
+const j=await r.json();q('rm').textContent=j.ok?'Thanks, your request is with Joe. He will confirm it.':(j.error||'Something went wrong.');if(j.ok)q('rs').disabled=true}
 catch(e){q('rm').textContent='Could not send. Please try again or contact Joe.'}};
 document.getElementById('bnote').textContent=cfg.booking_note;document.getElementById('upd').textContent=b.updated?'Availability updated '+b.updated:'';draw()})();
 </script></body></html>

@@ -1,0 +1,21 @@
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Book a session</title><link rel="stylesheet" href="style.css"></head><body>
+<header><img id="logo" alt=""><div><h1 id="name"></h1><small id="sub"></small></div></header>
+<main><h2>Book a session</h2>
+<p>Green times are free. Tap one to go to the sign-up form and choose your times.</p>
+<div class="nav"><button class="sec" id="prev">&larr; Earlier</button><b id="range"></b><button class="sec" id="next">Later &rarr;</button></div>
+<div class="legend"><span>Free</span><span>– Not available</span></div>
+<p class="note" id="bnote"></p>
+<div class="grid" id="cal"></div>
+<h3>Need to change a time?</h3>
+<p class="note">Tell us who you are once and we'll remember it on this device. Then tap a free time above and copy the change request to send on. You only choose the new time.</p>
+<p><input id="me" placeholder="Your name"> <input id="ct" placeholder="Phone or email"></p><p id="chg" class="note"></p><p class="note" id="upd"></p></main>
+<script src="common.js"></script><script>
+(async()=>{const cfg=await loadConfig();let b;try{b=await (await fetch(cfg.busy_url||'data/busy.json')).json()}catch(e){b=await (await fetch('data/busy.json')).json()}
+const busy=new Set(b.busy);let w=mondayOf(new Date());const base=new Date(w);
+const draw=()=>{const e=new Date(w);e.setDate(e.getDate()+6);document.getElementById('range').textContent=w.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' – '+e.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+renderWeek(document.getElementById('cal'),cfg,busy,w,k=>{const me=(localStorage.getItem('me')||''),ct=localStorage.getItem('ct')||'';if(me){document.getElementById('chg').textContent='Change request: "Hi Joe, it\'s '+me+' ('+ct+'). Can you move my session to '+k.replace(' ',' at ')+':00?" (copy and send it to Joe)'}else{location.href=cfg.signup_form+'?slot='+encodeURIComponent(k)}});
+document.getElementById('prev').disabled=w<=base;document.getElementById('next').disabled=((w-base)/604800000)>=cfg.weeks_ahead-1};
+document.getElementById('prev').onclick=()=>{w.setDate(w.getDate()-7);draw()};document.getElementById('next').onclick=()=>{w.setDate(w.getDate()+7);draw()};
+document.getElementById('bnote').textContent=cfg.booking_note;const me=document.getElementById('me'),ct=document.getElementById('ct');try{me.value=localStorage.getItem('me')||'';ct.value=localStorage.getItem('ct')||''}catch(e){}me.onchange=ct.onchange=()=>{try{localStorage.setItem('me',me.value);localStorage.setItem('ct',ct.value)}catch(e){}};document.getElementById('upd').textContent=b.updated?'Availability updated '+b.updated:'';draw()})();
+</script></body></html>

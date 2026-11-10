@@ -1,0 +1,56 @@
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Bookings (Joe)</title><link rel="stylesheet" href="style.css"></head><body>
+<header><img id="logo" alt=""><div><h1 id="name"></h1><small id="sub">Your bookings</small></div></header>
+<main>
+<p class="note">Load your bookings (File &gt; Download &gt; CSV from the "Bookings" tab, or the last file you saved here), change things, then save. Nothing leaves your device until you paste/upload it.</p>
+<div class="nav"><input type="file" id="f" accept=".csv"><button id="add">Add booking</button><button id="save">Save bookings CSV</button><button id="pub" class="sec">Save availability file</button></div>
+<div class="grid" id="cal"></div>
+<h3>Weekly schedule</h3><p class="note">Open for PT = times clients can book. Shift / class = blocked. Change anything, then "Save schedule file". Away dates block whole days.</p>
+<table id="sc"><thead><tr><th>Day</th><th>Type</th><th>From (hour)</th><th>To (hour)</th><th>Label</th><th></th></tr></thead><tbody></tbody></table>
+<div class="nav"><button id="addw" class="sec">Add time</button><button id="adda" class="sec">Add away dates</button><button id="savec">Save schedule file</button></div>
+<table id="aw"><thead><tr><th>Away from</th><th>to</th><th>Note</th><th></th></tr></thead><tbody></tbody></table>
+<h3>Bookings</h3><table id="t"><thead><tr><th>Date</th><th>Start</th><th>End</th><th>Client</th><th>Contact</th><th>Gym</th><th>Status</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
+</main><script src="common.js"></script><script>
+const COLS=['Booking ID','Date','Start time','End time','Client','Contact','Gym','Status','Notes','Changed from'];
+let rows=[],cfg;
+const DN=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+function wins(){const L=[];Object.entries(cfg.open).forEach(([day,l])=>l.forEach(w=>L.push({day,type:'Open for PT',from:w[0],to:w[1],label:''})));(cfg.blocked||[]).forEach(b=>L.push({day:b.day,type:'Shift or class',from:b.from,to:b.to,label:b.label||''}));return L}
+function setWins(L){cfg.open={};cfg.blocked=[];L.forEach(w=>{w.from=+w.from;w.to=+w.to;if(w.type==='Open for PT'){(cfg.open[w.day]=cfg.open[w.day]||[]).push([w.from,w.to])}else cfg.blocked.push({day:w.day,from:w.from,to:w.to,label:w.label})})}
+function drawSched(){const L=wins();const tb=document.querySelector('#sc tbody');tb.innerHTML='';
+ L.forEach((w,i)=>{const tr=document.createElement('tr');
+  const mk=(k,el)=>{const td=document.createElement('td');td.append(el);tr.append(td)};
+  const sd=document.createElement('select');DN.forEach(d=>sd.add(new Option(d,d)));sd.value=w.day;sd.onchange=()=>{w.day=sd.value;setWins(L);drawSched();draw()};mk(0,sd);
+  const st=document.createElement('select');['Open for PT','Shift or class'].forEach(d=>st.add(new Option(d,d)));st.value=w.type;st.onchange=()=>{w.type=st.value;setWins(L);drawSched();draw()};mk(0,st);
+  ['from','to'].forEach(f=>{const n=document.createElement('input');n.type='number';n.min=0;n.max=24;n.style.width='60px';n.value=w[f];n.onchange=()=>{w[f]=n.value;setWins(L);draw()};mk(0,n)});
+  const lb=document.createElement('input');lb.value=w.label;lb.onchange=()=>{w.label=lb.value;setWins(L)};mk(0,lb);
+  const x=document.createElement('button');x.className='sec';x.textContent='Delete';x.onclick=()=>{L.splice(i,1);setWins(L);drawSched();draw()};mk(0,x);tb.append(tr)});
+ const ab=document.querySelector('#aw tbody');ab.innerHTML='';(cfg.away=cfg.away||[]).forEach((a,i)=>{const tr=document.createElement('tr');
+  ['from','to','note'].forEach(f=>{const td=document.createElement('td'),n=document.createElement('input');n.type=f=='note'?'text':'date';n.value=a[f]||'';n.onchange=()=>{a[f]=n.value;draw()};td.append(n);tr.append(td)});
+  const td=document.createElement('td'),x=document.createElement('button');x.className='sec';x.textContent='Delete';x.onclick=()=>{cfg.away.splice(i,1);drawSched();draw()};td.append(x);tr.append(td);ab.append(tr)})}
+document.getElementById('addw').onclick=()=>{const L=wins();L.push({day:'Monday',type:'Open for PT',from:17,to:21,label:''});setWins(L);drawSched();draw()};
+document.getElementById('adda').onclick=()=>{(cfg.away=cfg.away||[]).push({from:iso(new Date()),to:iso(new Date()),note:''});drawSched();draw()};
+document.getElementById('savec').onclick=()=>dl('config.json',JSON.stringify(cfg,null,2),'application/json');
+function parseCSV(s){const out=[];let r=[],c='',q=false;for(let i=0;i<s.length;i++){const ch=s[i];
+ if(q){if(ch=='"'&&s[i+1]=='"'){c+='"';i++}else if(ch=='"')q=false;else c+=ch}
+ else if(ch=='"')q=true;else if(ch==','){r.push(c);c=''}else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&s[i+1]=='\n')i++;r.push(c);c='';if(r.length>1||r[0])out.push(r);r=[]}else c+=ch}
+ if(c||r.length){r.push(c);out.push(r)}return out}
+const esc=v=>/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+function toObjs(a){const h=a[0];return a.slice(1).map(r=>Object.fromEntries(COLS.map(c=>[c,r[h.indexOf(c)]||''])))}
+function busySet(){const s=new Set();rows.forEach(r=>{if(r.Status==='Cancelled'||!r.Date)return;
+ const a=parseInt(r['Start time']),b=parseInt(r['End time'])||a+1;for(let h=a;h<Math.max(b,a+1);h++)s.add(r.Date+' '+pad(h))});return s}
+function draw(){const tb=document.querySelector('#t tbody');tb.innerHTML='';
+ rows.sort((a,b)=>(a.Date+a['Start time']).localeCompare(b.Date+b['Start time']));
+ rows.forEach((r,i)=>{const tr=document.createElement('tr');
+  [['Date','date'],['Start time','time'],['End time','time'],['Client','text'],['Contact','text'],['Gym','text'],['Notes','text']].forEach(([c,t])=>{
+   const td=document.createElement('td'),inp=document.createElement('input');inp.type=t;inp.value=r[c];inp.size=t=='text'?10:8;
+   inp.onchange=()=>{if((c=='Date'||c=='Start time')&&!r['Changed from'])r['Changed from']=r.Date+' '+r['Start time'];r[c]=inp.value;draw()};td.append(inp);tr.append(td)});
+  const st=document.createElement('td'),sel=document.createElement('select');['Confirmed','Pending','Cancelled'].forEach(o=>{const op=new Option(o,o);sel.add(op)});sel.value=r.Status||'Confirmed';sel.onchange=()=>{r.Status=sel.value;draw()};st.append(sel);tr.insertBefore(st,tr.children[6]);
+  const d=document.createElement('td'),x=document.createElement('button');x.className='sec';x.textContent='Delete';x.onclick=()=>{rows.splice(i,1);draw()};d.append(x);tr.append(d);tb.append(tr)});
+ const w=mondayOf(new Date());renderWeek(document.getElementById('cal'),cfg,busySet(),w,null)}
+function dl(name,txt,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=name;a.click()}
+document.getElementById('f').onchange=async e=>{rows=toObjs(parseCSV(await e.target.files[0].text()));draw()};
+document.getElementById('add').onclick=()=>{rows.push(Object.fromEntries(COLS.map(c=>[c,''])));const r=rows[rows.length-1];r['Booking ID']='B'+Date.now().toString(36);r.Status='Confirmed';draw()};
+document.getElementById('save').onclick=()=>dl('bookings.csv',[COLS.join(',')].concat(rows.map(r=>COLS.map(c=>esc(r[c]||'')).join(','))).join('\n')+'\n','text/csv');
+document.getElementById('pub').onclick=()=>dl('busy.json',JSON.stringify({updated:new Date().toLocaleString('en-GB'),busy:[...busySet()].sort()},null,1),'application/json');
+(async()=>{cfg=await loadConfig();drawSched();try{rows=toObjs(parseCSV(await (await fetch('data/bookings.csv')).text()))}catch(e){}draw()})();
+</script></body></html>

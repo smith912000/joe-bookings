@@ -1,0 +1,74 @@
+{
+  "name": "Runt Works",
+  "title": "Coach Joe \u00b7 Personal Training",
+  "logo": "assets/logo.png",
+  "signup_form": "https://smith912000.app.n8n.cloud/form/train-with-joe",
+  "weeks_ahead": 2,
+  "open": {
+    "Monday": [
+      [
+        17,
+        21
+      ]
+    ],
+    "Friday": [
+      [
+        10,
+        17
+      ]
+    ]
+  },
+  "blocked": [
+    {
+      "day": "Wednesday",
+      "from": 6,
+      "to": 10,
+      "label": "Pure Gym shift"
+    },
+    {
+      "day": "Thursday",
+      "from": 16,
+      "to": 20,
+      "label": "Pure Gym shift"
+    },
+    {
+      "day": "Friday",
+      "from": 6,
+      "to": 10,
+      "label": "Pure Gym shift"
+    },
+    {
+      "day": "Sunday",
+      "from": 8,
+      "to": 12,
+      "label": "Pure Gym shift"
+    },
+    {
+      "day": "Tuesday",
+      "from": 18,
+      "to": 19,
+      "label": "Boxing Academy teenage class"
+    },
+    {
+      "day": "Tuesday",
+      "from": 19,
+      "to": 20,
+      "label": "Boxing Academy mixed boxing class"
+    },
+    {
+      "day": "Wednesday",
+      "from": 19,
+      "to": 20,
+      "label": "Boxing Academy Muay Thai class"
+    },
+    {
+      "day": "Saturday",
+      "from": 9,
+      "to": 10,
+      "label": "Boxing Academy teenage class"
+    }
+  ],
+  "away": [],
+  "booking_note": "Booking more than one hour? If you're flexible on times, we'll line your sessions up back to back with Joe's other PT clients that day so there are no gaps. Need to change a time later? Your details are remembered, so you only pick the new time.",
+  "busy_url": ""
+}

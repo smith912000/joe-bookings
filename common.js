@@ -14,6 +14,7 @@ function isOpen(cfg,d,h){const day=DAYS[d.getDay()],k=iso(d);
 function hourRange(cfg){let lo=24,hi=0;const add=(a,b)=>{lo=Math.min(lo,a);hi=Math.max(hi,b)};
   Object.values(cfg.open).forEach(l=>l.forEach(w=>add(w[0],w[1])));(cfg.blocked||[]).forEach(b=>add(b.from,b.to));
   return lo>hi?[7,20]:[lo,hi]}
+// busy = Set of (null while the live list is still loading: open slots show … and can't be tapped)
 // busy = Set of "YYYY-MM-DD HH"
 function renderWeek(el,cfg,busy,start,onFree){
   let h='<div class="h"></div>';const days=[];
@@ -23,9 +24,9 @@ function renderWeek(el,cfg,busy,start,onFree){
   for(let hr=lo;hr<hi;hr++){h+=`<div class="t">${pad(hr)}:00</div>`;
     days.forEach(d=>{const k=iso(d)+' '+pad(hr);
       const past=new Date(d.getFullYear(),d.getMonth(),d.getDate(),hr)<now;
-      const open=isOpen(cfg,d,hr)&&!past&&!busy.has(k);
-      h+=open?`<div class="free" data-k="${k}">Free</div>`:`<div class="busy">–</div>`})}
-  el.innerHTML=h;el.onclick=e=>{const n=e.target.closest&&e.target.closest('.free');if(n&&onFree)onFree(n.dataset.k)}}
+      const open=isOpen(cfg,d,hr)&&!past;
+      h+=!open?`<div class="off">–</div>`:busy===null?`<div class="wait" aria-label="Checking">…</div>`:busy.has(k)?`<div class="busy" aria-label="Taken">×</div>`:`<div class="free" data-k="${k}" role="button" tabindex="0">Free</div>`})}
+  el.innerHTML=h;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){const n=e.target.closest&&e.target.closest('.free');if(n&&onFree){e.preventDefault();onFree(n.dataset.k)}}};el.onclick=e=>{const n=e.target.closest&&e.target.closest('.free');if(n&&onFree)onFree(n.dataset.k)}}
 
 // Joe's Schedule tab (served with the busy list) overrides the saved schedule, so his changes go live without anyone in between
 function applySchedule(cfg,b){if(b&&b.schedule&&b.schedule.open){cfg.open=b.schedule.open;cfg.blocked=b.schedule.blocked||[];cfg.away=b.schedule.away||[]}return cfg}

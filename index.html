@@ -4,7 +4,7 @@
 <main><h2>Book a session</h2>
 <p>Green times are free. Tap one to go to the sign-up form and choose your times.</p>
 <div class="nav"><button class="sec" id="prev">&larr; Earlier</button><b id="range"></b><button class="sec" id="next">Later &rarr;</button></div>
-<div class="legend"><span>Free</span><span>– Not available</span></div>
+<div class="legend"><span>Free</span><span>× Taken</span><span>– Not offered</span></div>
 <div id="rq" hidden role="dialog" aria-modal="true" style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);overflow:auto;padding:16px"><div style="background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:14px;max-width:520px;margin:6vh auto"><b id="rqt"></b>
 <p><input id="rn" placeholder="Your name"> <input id="rc" placeholder="Phone or email"></p>
 <p><select id="rh"><option value="1">1 hour</option><option value="2">2 hours</option><option value="3">3 hours</option></select>
@@ -17,11 +17,16 @@
 <p class="note" id="upd"></p></main>
 <script src="common.js"></script><script>
 function openForm(k){const q=id=>document.getElementById(id);q('rq').hidden=false;q('rqt').textContent='Request '+k.replace(' ',' at ')+':00';q('rq').dataset.k=k;q('rm').textContent='';q('rs').disabled=false}
-(async()=>{const cfg=await loadConfig();let b;try{b=await (await fetch(cfg.busy_url||'data/busy.json')).json()}catch(e){b=await (await fetch('data/busy.json')).json()}
-applySchedule(cfg,b);const busy=new Set(b.busy);let w=mondayOf(new Date());const base=new Date(w);
+(async()=>{const cfg=await loadConfig();let busy=null,upd='';let w=mondayOf(new Date());const base=new Date(w);
 const draw=()=>{const e=new Date(w);e.setDate(e.getDate()+6);document.getElementById('range').textContent=w.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' – '+e.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
 renderWeek(document.getElementById('cal'),cfg,busy,w,k=>openForm(k));
+document.getElementById('upd').textContent=busy===null?'Checking which times are free…':(upd?'Availability updated '+upd:'');
 document.getElementById('prev').disabled=w<=base;document.getElementById('next').disabled=((w-base)/604800000)>=cfg.weeks_ahead-1};
+document.getElementById('bnote').textContent=cfg.booking_note;
+draw();   // grid at once from the saved hours; open times show "…" until the live list arrives
+const get=async u=>(await fetch(u)).json();
+let b;try{b=await get(cfg.busy_url||'data/busy.json')}catch(e){try{b=await get('data/busy.json')}catch(e2){b={busy:[]}}}
+applySchedule(cfg,b);busy=new Set(b.busy||[]);upd=b.updated||'';draw();
 document.getElementById('prev').onclick=()=>{w.setDate(w.getDate()-7);draw()};document.getElementById('next').onclick=()=>{w.setDate(w.getDate()+7);draw()};
 const q=id=>document.getElementById(id);q('rx').onclick=()=>q('rq').hidden=true;
 try{q('rn').value=localStorage.getItem('me')||'';q('rc').value=localStorage.getItem('ct')||''}catch(e){}
@@ -31,5 +36,5 @@ q('rm').textContent='Sending...';const note=(q('rf').checked?'Flexible on time. 
 try{const r=await fetch(cfg.busy_url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({name:q('rn').value,contact:q('rc').value,slot:k,hours:q('rh').value,note:note,change:q('rch').checked,website:q('rw').value})});
 const j=await r.json();q('rm').textContent=j.ok?'Thanks, your request is with Joe. He will confirm it.':(j.error||'Something went wrong.');if(j.ok)q('rs').disabled=true}
 catch(e){q('rm').textContent='Could not send. Please try again or contact Joe.'}};
-document.getElementById('bnote').textContent=cfg.booking_note;document.getElementById('upd').textContent=b.updated?'Availability updated '+b.updated:'';draw()})();
+})();
 </script></body></html>

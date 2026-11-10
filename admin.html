@@ -2,7 +2,8 @@
 <meta name="robots" content="noindex"><title>Bookings (Joe)</title><link rel="stylesheet" href="style.css"></head><body>
 <header><img id="logo" alt=""><div><h1 id="name"></h1><small id="sub">Your bookings</small></div></header>
 <main>
-<p class="note">Load your bookings (File &gt; Download &gt; CSV from the "Bookings" tab, or the last file you saved here), change things, then save. Nothing leaves your device until you paste/upload it.</p>
+<p><a class="btn" id="sheetlink" target="_blank" rel="noopener">Open my bookings sheet</a> <span class="note">New requests from customers arrive there as "Pending". Confirm, move or cancel them in the sheet; the calendar updates at once.</span></p>
+<p class="note">Optional: load your bookings (File &gt; Download &gt; CSV from the "Bookings" tab, or the last file you saved here), change things, then save. Nothing leaves your device until you paste/upload it.</p>
 <div class="nav"><input type="file" id="f" accept=".csv"><button id="add">Add booking</button><button id="save">Save bookings CSV</button><button id="pub" class="sec">Save availability file</button></div>
 <div class="grid" id="cal"></div>
 <h3>Weekly schedule</h3><p class="note">Open for PT = times clients can book. Shift / class = blocked. Change anything, then "Save schedule file". Away dates block whole days.</p>
@@ -52,5 +53,5 @@ document.getElementById('f').onchange=async e=>{rows=toObjs(parseCSV(await e.tar
 document.getElementById('add').onclick=()=>{rows.push(Object.fromEntries(COLS.map(c=>[c,''])));const r=rows[rows.length-1];r['Booking ID']='B'+Date.now().toString(36);r.Status='Confirmed';draw()};
 document.getElementById('save').onclick=()=>dl('bookings.csv',[COLS.join(',')].concat(rows.map(r=>COLS.map(c=>esc(r[c]||'')).join(','))).join('\n')+'\n','text/csv');
 document.getElementById('pub').onclick=()=>dl('busy.json',JSON.stringify({updated:new Date().toLocaleString('en-GB'),busy:[...busySet()].sort()},null,1),'application/json');
-(async()=>{cfg=await loadConfig();drawSched();try{rows=toObjs(parseCSV(await (await fetch('data/bookings.csv')).text()))}catch(e){}draw()})();
+(async()=>{cfg=await loadConfig();document.getElementById('sheetlink').href=cfg.sheet_url;drawSched();try{rows=toObjs(parseCSV(await (await fetch('data/bookings.csv')).text()))}catch(e){}draw()})();
 </script></body></html>

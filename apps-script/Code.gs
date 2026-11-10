@@ -83,14 +83,44 @@ function doPost(e) {
     if (d.website) return json_({ ok: true });                     // honeypot
     var name = String(d.name || '').trim().slice(0, 80), contact = String(d.contact || '').trim().slice(0, 100);
     var note = String(d.note || '').trim().slice(0, 300), hours = Math.min(Math.max(parseInt(d.hours, 10) || 1, 1), 3);
-    var m = String(d.slot || '').match(/^(\d{4}-\d{2}-\d{2}) (\d{2})$/);
+    var m = String(d.slot || '').match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2})$/);
     if (!name || !contact || !m) return json_({ ok: false, error: 'Please give your name, contact and a time.' });
-    var start = parseInt(m[2], 10), busy = readBusy_().busy;
-    for (var h = start; h < start + hours; h++) if (busy.indexOf(m[1] + ' ' + pad2(h)) >= 0) return json_({ ok: false, error: 'Sorry, that time has just been taken.' });
-    var sh = SpreadsheetApp.getActive().getSheetByName(SHEET);
-    if (sh.getLastRow() > 500) return json_({ ok: false, error: 'Please contact Joe directly.' });
-    sh.appendRow(['R' + new Date().getTime().toString(36), m[1], pad2(start) + ':00', pad2(start + hours) + ':00', name, contact, '', 'Pending',
-                  (d.change ? 'CHANGE OF TIME REQUEST. ' : '') + note, '']);
+    var date = m[1] + '-' + m[2] + '-' + m[3], start = parseInt(m[4], 10);
+    if (start + hours > 24) return json_({ ok: false, error: 'Sorry, that time is not available.' });
+
+    // The slot must be one Joe offers: open window, not a shift or class, not an away date, in the future, within 8 weeks.
+    var sch = readSchedule_();
+    if (!sch) return json_({ ok: false, error: 'Please contact Joe directly.' });
+    var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    var day = days[new Date(+m[1], +m[2] - 1, +m[3]).getDay()], now = new Date();
+    if (new Date(+m[1], +m[2] - 1, +m[3], start) < now || new Date(+m[1], +m[2] - 1, +m[3], start) > new Date(now.getTime() + 56 * 86400000))
+      return json_({ ok: false, error: 'Sorry, that time is not available.' });
+    for (var k = start; k < start + hours; k++) {
+      var inOpen = (sch.open[day] || []).some(function (w) { return k >= w[0] && k < w[1]; });
+      var inShift = sch.blocked.some(function (b) { return b.day === day && k >= b.from && k < b.to; });
+      var inAway = sch.away.some(function (a) { return date >= a.from && date <= (a.to || a.from); });
+      if (!inOpen || inShift || inAway) return json_({ ok: false, error: 'Sorry, that time is not available.' });
+    }
+
+    var res = readBusy_(), busy = res.busy;
+    for (var h = start; h < start + hours; h++) if (busy.indexOf(date + ' ' + pad2(h)) >= 0) return json_({ ok: false, error: 'Sorry, that time has just been taken.' });
+
+    // Spam limits: only Pending rows count, so junk can't fill the sheet for good; a hard cap stops runaway growth.
+    var pending = 0, mine = 0, lc = contact.toLowerCase();
+    for (var i = 1; i < res.rows.length; i++) {
+      if (String(res.rows[i][7]).trim().toLowerCase() !== 'pending') continue;
+      pending++;
+      if (String(res.rows[i][5]).trim().toLowerCase() === lc) mine++;
+    }
+    if (mine >= 3) return json_({ ok: false, error: 'You already have requests waiting for Joe to confirm. Please wait for him to reply.' });
+    if (pending >= 60 || res.rows.length > 3000) return json_({ ok: false, error: 'Please contact Joe directly.' });
+
+    var sh = SpreadsheetApp.getActive().getSheetByName(SHEET), row = sh.getLastRow() + 1;
+    // Name, contact and notes are stored as plain text, so a value starting with = + - or @ can never run as a formula.
+    sh.getRange(row, 5, 1, 2).setNumberFormat('@');
+    sh.getRange(row, 9, 1, 1).setNumberFormat('@');
+    sh.getRange(row, 1, 1, 10).setValues([['R' + new Date().getTime().toString(36), date, pad2(start) + ':00', pad2(start + hours) + ':00', name, contact, '', 'Pending',
+                  (d.change ? 'CHANGE OF TIME REQUEST. ' : '') + note, '']]);
     return json_({ ok: true });
   } catch (err) { return json_({ ok: false, error: 'Could not save: ' + err }); }
   finally { lock.releaseLock(); }

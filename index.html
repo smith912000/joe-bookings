@@ -5,17 +5,30 @@
 <p>Green times are free. Tap one to go to the sign-up form and choose your times.</p>
 <div class="nav"><button class="sec" id="prev">&larr; Earlier</button><b id="range"></b><button class="sec" id="next">Later &rarr;</button></div>
 <div class="legend"><span>Free</span><span>– Not available</span></div>
+<div id="rq" hidden style="border:1px solid var(--line);border-radius:8px;padding:12px;margin:12px 0"><b id="rqt"></b>
+<p><input id="rn" placeholder="Your name"> <input id="rc" placeholder="Phone or email"></p>
+<p><select id="rh"><option value="1">1 hour</option><option value="2">2 hours</option><option value="3">3 hours</option></select>
+<label><input type="checkbox" id="rf"> I'm flexible on time</label> <label><input type="checkbox" id="rch"> This is a change to an existing booking</label></p>
+<p><input id="rno" placeholder="Anything Joe should know (optional)" style="width:100%"></p><input id="rw" tabindex="-1" autocomplete="off" style="display:none">
+<button id="rs">Send request</button> <button id="rx" class="sec">Cancel</button> <span id="rm" class="note"></span></div>
 <p class="note" id="bnote"></p>
 <div class="grid" id="cal"></div>
-<h3>Need to change a time?</h3>
-<p class="note">Tell us who you are once and we'll remember it on this device. Then tap a free time above and copy the change request to send on. You only choose the new time.</p>
-<p><input id="me" placeholder="Your name"> <input id="ct" placeholder="Phone or email"></p><p id="chg" class="note"></p><p class="note" id="upd"></p></main>
+<p class="note" id="upd"></p></main>
 <script src="common.js"></script><script>
+function openForm(k){const q=id=>document.getElementById(id);q('rq').hidden=false;q('rqt').textContent='Request '+k.replace(' ',' at ')+':00';q('rq').dataset.k=k;q('rm').textContent='';q('rq').scrollIntoView({behavior:'smooth'})}
 (async()=>{const cfg=await loadConfig();let b;try{b=await (await fetch(cfg.busy_url||'data/busy.json')).json()}catch(e){b=await (await fetch('data/busy.json')).json()}
 const busy=new Set(b.busy);let w=mondayOf(new Date());const base=new Date(w);
 const draw=()=>{const e=new Date(w);e.setDate(e.getDate()+6);document.getElementById('range').textContent=w.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' – '+e.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-renderWeek(document.getElementById('cal'),cfg,busy,w,k=>{const me=(localStorage.getItem('me')||''),ct=localStorage.getItem('ct')||'';if(me){document.getElementById('chg').textContent='Change request: "Hi Joe, it\'s '+me+' ('+ct+'). Can you move my session to '+k.replace(' ',' at ')+':00?" (copy and send it to Joe)'}else{location.href=cfg.signup_form+'?slot='+encodeURIComponent(k)}});
+renderWeek(document.getElementById('cal'),cfg,busy,w,k=>openForm(k));
 document.getElementById('prev').disabled=w<=base;document.getElementById('next').disabled=((w-base)/604800000)>=cfg.weeks_ahead-1};
 document.getElementById('prev').onclick=()=>{w.setDate(w.getDate()-7);draw()};document.getElementById('next').onclick=()=>{w.setDate(w.getDate()+7);draw()};
-document.getElementById('bnote').textContent=cfg.booking_note;const me=document.getElementById('me'),ct=document.getElementById('ct');try{me.value=localStorage.getItem('me')||'';ct.value=localStorage.getItem('ct')||''}catch(e){}me.onchange=ct.onchange=()=>{try{localStorage.setItem('me',me.value);localStorage.setItem('ct',ct.value)}catch(e){}};document.getElementById('upd').textContent=b.updated?'Availability updated '+b.updated:'';draw()})();
+const q=id=>document.getElementById(id);q('rx').onclick=()=>q('rq').hidden=true;
+try{q('rn').value=localStorage.getItem('me')||'';q('rc').value=localStorage.getItem('ct')||''}catch(e){}
+q('rs').onclick=async()=>{const k=q('rq').dataset.k;if(!q('rn').value.trim()||!q('rc').value.trim()){q('rm').textContent='Please add your name and contact.';return}
+try{localStorage.setItem('me',q('rn').value);localStorage.setItem('ct',q('rc').value)}catch(e){}
+q('rm').textContent='Sending...';const note=(q('rf').checked?'Flexible on time. ':'')+q('rno').value;
+try{const r=await fetch(cfg.busy_url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({name:q('rn').value,contact:q('rc').value,slot:k,hours:q('rh').value,note:note,change:q('rch').checked,website:q('rw').value})});
+const j=await r.json();q('rm').textContent=j.ok?'Thanks, your request is with Joe. He will confirm it.':(j.error||'Something went wrong.');if(j.ok)q('rq').querySelector('#rs').disabled=true}
+catch(e){q('rm').textContent='Could not send. Please try again or contact Joe.'}};
+document.getElementById('bnote').textContent=cfg.booking_note;document.getElementById('upd').textContent=b.updated?'Availability updated '+b.updated:'';draw()})();
 </script></body></html>

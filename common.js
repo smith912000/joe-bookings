@@ -26,3 +26,6 @@ function renderWeek(el,cfg,busy,start,onFree){
       const open=isOpen(cfg,d,hr)&&!past&&!busy.has(k);
       h+=open?`<div class="free" data-k="${k}">Free</div>`:`<div class="busy">–</div>`})}
   el.innerHTML=h;el.onclick=e=>{const n=e.target.closest&&e.target.closest('.free');if(n&&onFree)onFree(n.dataset.k)}}
+
+// Joe's Schedule tab (served with the busy list) overrides the saved schedule, so his changes go live without anyone in between
+function applySchedule(cfg,b){if(b&&b.schedule&&b.schedule.open){cfg.open=b.schedule.open;cfg.blocked=b.schedule.blocked||[];cfg.away=b.schedule.away||[]}return cfg}

@@ -18,7 +18,7 @@
 <script src="common.js"></script><script>
 function openForm(k){const q=id=>document.getElementById(id);q('rq').hidden=false;q('rqt').textContent='Request '+k.replace(' ',' at ')+':00';q('rq').dataset.k=k;q('rm').textContent='';q('rs').disabled=false}
 (async()=>{const cfg=await loadConfig();let b;try{b=await (await fetch(cfg.busy_url||'data/busy.json')).json()}catch(e){b=await (await fetch('data/busy.json')).json()}
-const busy=new Set(b.busy);let w=mondayOf(new Date());const base=new Date(w);
+applySchedule(cfg,b);const busy=new Set(b.busy);let w=mondayOf(new Date());const base=new Date(w);
 const draw=()=>{const e=new Date(w);e.setDate(e.getDate()+6);document.getElementById('range').textContent=w.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' – '+e.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
 renderWeek(document.getElementById('cal'),cfg,busy,w,k=>openForm(k));
 document.getElementById('prev').disabled=w<=base;document.getElementById('next').disabled=((w-base)/604800000)>=cfg.weeks_ahead-1};

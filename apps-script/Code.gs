@@ -48,11 +48,30 @@ function readBusy_() {
   return { busy: Object.keys(busy).sort(), used: used, skipped: skipped, rows: rows };
 }
 
+// Joe's weekly hours live in the "Schedule" tab: Type (Open/Shift/Away), Day, From hour, To hour, Away from, Away to, Label.
+// Returns null if the tab is missing or has no usable rows, so the site falls back to its saved schedule.
+function readSchedule_() {
+  var sh = SpreadsheetApp.getActive().getSheetByName('Schedule');
+  if (!sh) return null;
+  var rows = sh.getDataRange().getDisplayValues(), open = {}, blocked = [], away = [], n = 0;
+  var days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i], t = String(r[0]).trim().toLowerCase();
+    var di = days.indexOf(String(r[1]).trim().toLowerCase()), day = di < 0 ? null : days[di].charAt(0).toUpperCase() + days[di].slice(1);
+    var a = parseHour(r[2]), b = parseHour(r[3]);
+    if (t === 'open' && day && a !== null && b !== null && b > a) { (open[day] = open[day] || []).push([a, b]); n++; }
+    else if ((t === 'shift' || t === 'blocked') && day && a !== null && b !== null && b > a) { blocked.push({ day: day, from: a, to: b, label: r[6] || '' }); n++; }
+    else if (t === 'away') { var f = parseDate(r[4]), u = parseDate(r[5]) || f; if (f) { away.push({ from: f, to: u, note: r[6] || '' }); n++; } }
+  }
+  return n ? { open: open, blocked: blocked, away: away } : null;
+}
+
 function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
 function doGet(e) {
   var tz = Session.getScriptTimeZone(), res = readBusy_();
   var out = { updated: Utilities.formatDate(new Date(), tz, 'dd/MM/yyyy HH:mm'), busy: res.busy };
+  var sch = readSchedule_(); if (sch) out.schedule = sch;
   if (e && e.parameter && e.parameter.debug) { out.rowsRead = res.rows.length - 1; out.rowsUsed = res.used; out.skippedRows = res.skipped; out.headers = res.rows[0]; out.firstRow = res.rows[1] || null; out.tz = tz; }
   return json_(out);
 }

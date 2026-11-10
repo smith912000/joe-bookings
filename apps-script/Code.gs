@@ -4,6 +4,8 @@
  *
  * GET  /exec            -> {"updated","busy":["YYYY-MM-DD HH",...]}  hours only, no names or contact details. Pending and Confirmed rows hold a slot.
  * GET  /exec?debug=1    -> how the script read the Bookings tab (for checking).
+ * POST /exec  (text/plain JSON {name, contact, slot:"YYYY-MM-DD HH", hours, note, change, website})
+ *                       -> adds a row with Status "Pending" for Joe to confirm in the Sheet.
  * Columns on "Bookings": Booking ID, Date, Start time, End time, Client, Contact, Gym, Status, Notes, Changed from.
  */
 var SHEET = 'Bookings';
@@ -53,4 +55,24 @@ function doGet(e) {
   var out = { updated: Utilities.formatDate(new Date(), tz, 'dd/MM/yyyy HH:mm'), busy: res.busy };
   if (e && e.parameter && e.parameter.debug) { out.rowsRead = res.rows.length - 1; out.rowsUsed = res.used; out.skippedRows = res.skipped; out.headers = res.rows[0]; out.firstRow = res.rows[1] || null; out.tz = tz; }
   return json_(out);
+}
+
+function doPost(e) {
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var d = JSON.parse(e.postData.contents);
+    if (d.website) return json_({ ok: true });                     // honeypot
+    var name = String(d.name || '').trim().slice(0, 80), contact = String(d.contact || '').trim().slice(0, 100);
+    var note = String(d.note || '').trim().slice(0, 300), hours = Math.min(Math.max(parseInt(d.hours, 10) || 1, 1), 3);
+    var m = String(d.slot || '').match(/^(\d{4}-\d{2}-\d{2}) (\d{2})$/);
+    if (!name || !contact || !m) return json_({ ok: false, error: 'Please give your name, contact and a time.' });
+    var start = parseInt(m[2], 10), busy = readBusy_().busy;
+    for (var h = start; h < start + hours; h++) if (busy.indexOf(m[1] + ' ' + pad2(h)) >= 0) return json_({ ok: false, error: 'Sorry, that time has just been taken.' });
+    var sh = SpreadsheetApp.getActive().getSheetByName(SHEET);
+    if (sh.getLastRow() > 500) return json_({ ok: false, error: 'Please contact Joe directly.' });
+    sh.appendRow(['R' + new Date().getTime().toString(36), m[1], pad2(start) + ':00', pad2(start + hours) + ':00', name, contact, '', 'Pending',
+                  (d.change ? 'CHANGE OF TIME REQUEST. ' : '') + note, '']);
+    return json_({ ok: true });
+  } catch (err) { return json_({ ok: false, error: 'Could not save: ' + err }); }
+  finally { lock.releaseLock(); }
 }

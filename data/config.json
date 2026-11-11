@@ -1,6 +1,6 @@
 {
   "name": "Runt Works",
-  "title": "Coach Joe \u00b7 Personal Training",
+  "title": "Coach Joe · Personal Training",
   "logo": "assets/logo.webp",
   "signup_form": "https://smith912000.app.n8n.cloud/form/train-with-joe",
   "weeks_ahead": 2,
@@ -13,7 +13,7 @@
     ],
     "Friday": [
       [
-        10,
+        11,
         17
       ]
     ]
@@ -34,7 +34,7 @@
     {
       "day": "Friday",
       "from": 6,
-      "to": 10,
+      "to": 11,
       "label": "Pure Gym shift"
     },
     {
@@ -71,5 +71,9 @@
   "away": [],
   "booking_note": "Booking more than one hour? If you're flexible on times, we'll line your sessions up back to back with Coach Joe's other PT clients that day so there are no gaps. Need to change a time later? Your details are remembered, so you only pick the new time.",
   "busy_url": "https://script.google.com/macros/s/AKfycbwful3adle_fgcbwCkgKKRFj8JFRQKmqv98rob-qqlqpU9JYt0FHfaOStnHlPzkd57v/exec",
-  "sheet_url": "https://docs.google.com/spreadsheets/d/1yqFw61HKIi9mExjL1728QWx4wtS-RMVZ4W8W6fbIJ7c/edit"
+  "sheet_url": "https://docs.google.com/spreadsheets/d/1yqFw61HKIi9mExjL1728QWx4wtS-RMVZ4W8W6fbIJ7c/edit",
+  "around": {
+    "before": 1,
+    "after": 1
+  }
 }

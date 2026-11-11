@@ -49,12 +49,13 @@ function readBusy_() {
 }
 
 // Joe's weekly hours live in the "Schedule" tab: Type (Open/Shift/Away), Day, From hour, To hour, Away from, Away to, Label, Week of (optional).
+// Rows 'PT before class' and 'PT after class' (hours in From hour) open that many hours of PT either side of every Boxing Academy class.
 // A row with a Week of date (the Monday of that week) applies to that week only and replaces the usual rows for that day.
 // Returns null if the tab is missing or has no usable rows, so the site falls back to its saved schedule.
 function readSchedule_() {
   var sh = SpreadsheetApp.getActive().getSheetByName('Schedule');
   if (!sh) return null;
-  var rows = sh.getDataRange().getDisplayValues(), open = {}, blocked = [], away = [], weeks = [], n = 0;
+  var rows = sh.getDataRange().getDisplayValues(), open = {}, blocked = [], away = [], weeks = [], around = { before: 0, after: 0 }, n = 0;
   var days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
   for (var i = 1; i < rows.length; i++) {
     var r = rows[i], t = String(r[0]).trim().toLowerCase();
@@ -67,9 +68,10 @@ function readSchedule_() {
       else { blocked.push({ day: day, from: a, to: b, label: r[6] || '' }); }
       n++;
     }
+    else if (t === 'pt before class' || t === 'pt after class') { var hrs = parseInt(r[2], 10); if (hrs >= 0 && hrs <= 4) { around[t === 'pt before class' ? 'before' : 'after'] = hrs; n++; } }
     else if (t === 'away') { var f = parseDate(r[4]), u = parseDate(r[5]) || f; if (f) { away.push({ from: f, to: u, note: r[6] || '' }); n++; } }
   }
-  return n ? { open: open, blocked: blocked, away: away, weeks: weeks } : null;
+  return n ? { open: open, blocked: blocked, away: away, weeks: weeks, around: around } : null;
 }
 
 function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
@@ -107,6 +109,11 @@ function doPost(e) {
     var ov = (sch.weeks || []).filter(function (w) { return w.week === wkKey && w.day === day; });
     var rOpen = ov.length ? ov.filter(function (w) { return w.type === 'open'; }).map(function (w) { return [w.from, w.to]; }) : (sch.open[day] || []);
     var rBlocked = ov.length ? ov.filter(function (w) { return w.type === 'shift'; }) : sch.blocked.filter(function (b) { return b.day === day; });
+    (sch.around && (sch.around.before || sch.around.after) ? rBlocked : []).forEach(function (b) {
+      if (!/boxing/i.test(b.label || '')) return;
+      if (sch.around.before > 0) rOpen = rOpen.concat([[Math.max(0, b.from - sch.around.before), b.from]]);
+      if (sch.around.after > 0) rOpen = rOpen.concat([[b.to, Math.min(24, b.to + sch.around.after)]]);
+    });
     for (var k = start; k < start + hours; k++) {
       var inOpen = rOpen.some(function (w) { return k >= w[0] && k < w[1]; });
       var inShift = rBlocked.some(function (b) { return k >= b.from && k < b.to; });

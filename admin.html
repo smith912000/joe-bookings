@@ -7,6 +7,9 @@
 <div class="nav"><input type="file" id="f" accept=".csv"><button id="add">Add booking</button><button id="save">Save bookings CSV</button><button id="pub" class="sec">Save availability file</button></div>
 <div class="grid" id="cal"></div>
 <p class="note"><b>Your hours and days away are now in the "Schedule" tab of your bookings sheet.</b> Change them there and the customer calendar follows by itself. The usual week below is read from there, so it always matches the calendar. To change just one week, add rows in the Schedule tab with that week's Monday date in the "Week of" column.</p>
+<h3>PT slots around boxing classes</h3>
+<p class="note">Hours of PT opened just before and just after every Boxing Academy class. Change these two numbers in the "Schedule" tab, on the rows "PT before class" and "PT after class" (the hours go in From hour). Set 0 to switch one off. Times that clash with a shift or another class stay blocked.</p>
+<p><label>Hours before a class <input type="number" id="ab" min="0" max="4" style="width:70px"></label> <label>Hours after a class <input type="number" id="aa" min="0" max="4" style="width:70px"></label></p>
 <h3>Your usual week</h3><p class="note">Open for PT = times clients can book. Shift / class = blocked. Change anything, then "Save schedule file". Away dates block whole days.</p>
 <table id="sc"><thead><tr><th>Day</th><th>Type</th><th>From hour</th><th>To hour</th><th>Label</th><th></th></tr></thead><tbody></tbody></table>
 <div class="nav"><button id="addw" class="sec">Add time</button><button id="adda" class="sec">Add away dates</button><button id="savec">Save schedule file</button></div>
@@ -16,7 +19,7 @@
 const COLS=['Booking ID','Date','Start time','End time','Client','Contact','Gym','Status','Notes','Changed from'];
 let rows=[],cfg;
 const DN=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-function wins(){const L=[];Object.entries(cfg.open).forEach(([day,l])=>l.forEach(w=>L.push({day,type:'Open for PT',from:w[0],to:w[1],label:''})));(cfg.blocked||[]).forEach(b=>L.push({day:b.day,type:'Shift or class',from:b.from,to:b.to,label:b.label||''}));return L}
+function wins(){const L=[];Object.entries(cfg.open).forEach(([day,l])=>l.forEach(w=>L.push({day,type:'Open for PT',from:w[0],to:w[1],label:''})));(cfg.blocked||[]).forEach(b=>L.push({day:b.day,type:'Shift or class',from:b.from,to:b.to,label:b.label||''}));return L.sort((x,y)=>DN.indexOf(x.day)-DN.indexOf(y.day)||(+x.from)-(+y.from))}
 function setWins(L){cfg.open={};cfg.blocked=[];L.forEach(w=>{w.from=+w.from;w.to=+w.to;if(w.type==='Open for PT'){(cfg.open[w.day]=cfg.open[w.day]||[]).push([w.from,w.to])}else cfg.blocked.push({day:w.day,from:w.from,to:w.to,label:w.label})})}
 function drawSched(){const L=wins();const tb=document.querySelector('#sc tbody');tb.innerHTML='';
  L.forEach((w,i)=>{const tr=document.createElement('tr');
@@ -54,5 +57,5 @@ document.getElementById('f').onchange=async e=>{rows=toObjs(parseCSV(await e.tar
 document.getElementById('add').onclick=()=>{rows.push(Object.fromEntries(COLS.map(c=>[c,''])));const r=rows[rows.length-1];r['Booking ID']='B'+Date.now().toString(36);r.Status='Confirmed';draw()};
 document.getElementById('save').onclick=()=>dl('bookings.csv',[COLS.join(',')].concat(rows.map(r=>COLS.map(c=>esc(r[c]||'')).join(','))).join('\n')+'\n','text/csv');
 document.getElementById('pub').onclick=()=>dl('busy.json',JSON.stringify({updated:new Date().toLocaleString('en-GB'),busy:[...busySet()].sort()},null,1),'application/json');
-(async()=>{cfg=await loadConfig();document.getElementById('sheetlink').href=cfg.sheet_url;try{applySchedule(cfg,await (await fetch(cfg.busy_url)).json())}catch(e){}drawSched();try{rows=toObjs(parseCSV(await (await fetch('data/bookings.csv')).text()))}catch(e){}draw()})();
+(async()=>{cfg=await loadConfig();document.getElementById('sheetlink').href=cfg.sheet_url;try{applySchedule(cfg,await (await fetch(cfg.busy_url)).json())}catch(e){}cfg.around=cfg.around||{before:0,after:0};document.getElementById('ab').value=cfg.around.before;document.getElementById('aa').value=cfg.around.after;document.getElementById('ab').onchange=e=>{cfg.around.before=+e.target.value;draw()};document.getElementById('aa').onchange=e=>{cfg.around.after=+e.target.value;draw()};drawSched();try{rows=toObjs(parseCSV(await (await fetch('data/bookings.csv')).text()))}catch(e){}draw()})();
 </script></body></html>

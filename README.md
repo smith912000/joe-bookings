@@ -9,6 +9,6 @@ Source of truth is the Google Sheet "Joe's Bookings" (tab Bookings). `tools/shee
 
 ## Schedule (data/config.json)
 - `open`: windows clients can book. `blocked`: Pure Gym shifts and Boxing Academy classes. `away`: whole-day absences. Joe edits all of these on `admin.html` and saves a new `config.json`.
-- Assumptions Joe can change: Monday evening open 17:00-21:00; Friday open 10:00-17:00 (after his Pure Gym shift); nothing else is open unless added; Sunday 8-12 is a shift; class slots are one hour each.
+- Assumptions Joe can change: Monday evening open 17:00-21:00; Friday open 11:00-17:00 after his Pure Gym shift (assumed); nothing else is open unless added; Sunday 8-12 is a shift; class slots are one hour each.
 - Flexible clients: sessions are lined up back to back with other PTs that day (booking note shown on the customer page).
 - Changing a time: Joe's page keeps the client's details when a booking is moved (old time kept in "Changed from"); on the customer page a client's name and contact are remembered on their device and a change request needs only the new time.

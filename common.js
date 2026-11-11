@@ -6,13 +6,18 @@ async function loadConfig(){const c=await (await fetch('data/config.json')).json
   const i=document.getElementById('logo');i.src=c.logo;i.alt=c.name+' logo';i.onerror=()=>{i.style.display='none'};return c}
 function mondayOf(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
 const inRange=(h,a,b)=>h>=a&&h<b;
+// Rules for one date: the weekly pattern, unless the sheet has rows for that exact week and day, which replace the pattern for that day only
+function dayRules(cfg,d){const day=DAYS[d.getDay()],wk=iso(mondayOf(d)),ov=(cfg.weeks||[]).filter(w=>w.week===wk&&w.day===day);
+  if(ov.length)return{open:ov.filter(w=>w.type==='open').map(w=>[w.from,w.to]),blocked:ov.filter(w=>w.type==='shift')};
+  return{open:(cfg.open||{})[day]||[],blocked:(cfg.blocked||[]).filter(b=>b.day===day)}}
 // is hour h on date d open for PT? open windows minus shifts/classes minus away dates
-function isOpen(cfg,d,h){const day=DAYS[d.getDay()],k=iso(d);
+function isOpen(cfg,d,h){const k=iso(d);
   if((cfg.away||[]).some(a=>k>=a.from&&k<=(a.to||a.from)))return false;
-  if(!(cfg.open[day]||[]).some(w=>inRange(h,w[0],w[1])))return false;
-  return !(cfg.blocked||[]).some(b=>b.day===day&&inRange(h,b.from,b.to))}
+  const r=dayRules(cfg,d);
+  if(!r.open.some(w=>inRange(h,w[0],w[1])))return false;
+  return !r.blocked.some(b=>inRange(h,b.from,b.to))}
 function hourRange(cfg){let lo=24,hi=0;const add=(a,b)=>{lo=Math.min(lo,a);hi=Math.max(hi,b)};
-  Object.values(cfg.open).forEach(l=>l.forEach(w=>add(w[0],w[1])));(cfg.blocked||[]).forEach(b=>add(b.from,b.to));
+  Object.values(cfg.open).forEach(l=>l.forEach(w=>add(w[0],w[1])));(cfg.blocked||[]).forEach(b=>add(b.from,b.to));(cfg.weeks||[]).forEach(w=>add(w.from,w.to));
   return lo>hi?[7,20]:[lo,hi]}
 // busy = Set of (null while the live list is still loading: open slots show … and can't be tapped)
 // busy = Set of "YYYY-MM-DD HH"
@@ -29,4 +34,4 @@ function renderWeek(el,cfg,busy,start,onFree){
   el.innerHTML=h;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){const n=e.target.closest&&e.target.closest('.free');if(n&&onFree){e.preventDefault();onFree(n.dataset.k)}}};el.onclick=e=>{const n=e.target.closest&&e.target.closest('.free');if(n&&onFree)onFree(n.dataset.k)}}
 
 // Joe's Schedule tab (served with the busy list) overrides the saved schedule, so his changes go live without anyone in between
-function applySchedule(cfg,b){if(b&&b.schedule&&b.schedule.open){cfg.open=b.schedule.open;cfg.blocked=b.schedule.blocked||[];cfg.away=b.schedule.away||[]}return cfg}
+function applySchedule(cfg,b){if(b&&b.schedule&&b.schedule.open){cfg.open=b.schedule.open;cfg.blocked=b.schedule.blocked||[];cfg.away=b.schedule.away||[];cfg.weeks=b.schedule.weeks||[]}return cfg}

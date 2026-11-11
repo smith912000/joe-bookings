@@ -48,22 +48,28 @@ function readBusy_() {
   return { busy: Object.keys(busy).sort(), used: used, skipped: skipped, rows: rows };
 }
 
-// Joe's weekly hours live in the "Schedule" tab: Type (Open/Shift/Away), Day, From hour, To hour, Away from, Away to, Label.
+// Joe's weekly hours live in the "Schedule" tab: Type (Open/Shift/Away), Day, From hour, To hour, Away from, Away to, Label, Week of (optional).
+// A row with a Week of date (the Monday of that week) applies to that week only and replaces the usual rows for that day.
 // Returns null if the tab is missing or has no usable rows, so the site falls back to its saved schedule.
 function readSchedule_() {
   var sh = SpreadsheetApp.getActive().getSheetByName('Schedule');
   if (!sh) return null;
-  var rows = sh.getDataRange().getDisplayValues(), open = {}, blocked = [], away = [], n = 0;
+  var rows = sh.getDataRange().getDisplayValues(), open = {}, blocked = [], away = [], weeks = [], n = 0;
   var days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
   for (var i = 1; i < rows.length; i++) {
     var r = rows[i], t = String(r[0]).trim().toLowerCase();
     var di = days.indexOf(String(r[1]).trim().toLowerCase()), day = di < 0 ? null : days[di].charAt(0).toUpperCase() + days[di].slice(1);
     var a = parseHour(r[2]), b = parseHour(r[3]);
-    if (t === 'open' && day && a !== null && b !== null && b > a) { (open[day] = open[day] || []).push([a, b]); n++; }
-    else if ((t === 'shift' || t === 'blocked') && day && a !== null && b !== null && b > a) { blocked.push({ day: day, from: a, to: b, label: r[6] || '' }); n++; }
+    var wk = r[7] ? parseDate(r[7]) : null, kind = t === 'open' ? 'open' : (t === 'shift' || t === 'blocked') ? 'shift' : null;
+    if (kind && day && a !== null && b !== null && b > a) {
+      if (wk) { weeks.push({ week: wk, day: day, type: kind, from: a, to: b, label: r[6] || '' }); }
+      else if (kind === 'open') { (open[day] = open[day] || []).push([a, b]); }
+      else { blocked.push({ day: day, from: a, to: b, label: r[6] || '' }); }
+      n++;
+    }
     else if (t === 'away') { var f = parseDate(r[4]), u = parseDate(r[5]) || f; if (f) { away.push({ from: f, to: u, note: r[6] || '' }); n++; } }
   }
-  return n ? { open: open, blocked: blocked, away: away } : null;
+  return n ? { open: open, blocked: blocked, away: away, weeks: weeks } : null;
 }
 
 function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
@@ -90,14 +96,20 @@ function doPost(e) {
 
     // The slot must be one Joe offers: open window, not a shift or class, not an away date, in the future, within 8 weeks.
     var sch = readSchedule_();
-    if (!sch) return json_({ ok: false, error: 'Please contact Joe directly.' });
+    if (!sch) return json_({ ok: false, error: 'Please contact Coach Joe directly.' });
     var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     var day = days[new Date(+m[1], +m[2] - 1, +m[3]).getDay()], now = new Date();
     if (new Date(+m[1], +m[2] - 1, +m[3], start) < now || new Date(+m[1], +m[2] - 1, +m[3], start) > new Date(now.getTime() + 56 * 86400000))
       return json_({ ok: false, error: 'Sorry, that time is not available.' });
+    // Rules for that date: the weekly pattern, unless the sheet has rows for that exact week and day.
+    var dt = new Date(+m[1], +m[2] - 1, +m[3]), mon = new Date(dt.getTime()); mon.setDate(mon.getDate() - ((dt.getDay() + 6) % 7));
+    var wkKey = mon.getFullYear() + '-' + pad2(mon.getMonth() + 1) + '-' + pad2(mon.getDate());
+    var ov = (sch.weeks || []).filter(function (w) { return w.week === wkKey && w.day === day; });
+    var rOpen = ov.length ? ov.filter(function (w) { return w.type === 'open'; }).map(function (w) { return [w.from, w.to]; }) : (sch.open[day] || []);
+    var rBlocked = ov.length ? ov.filter(function (w) { return w.type === 'shift'; }) : sch.blocked.filter(function (b) { return b.day === day; });
     for (var k = start; k < start + hours; k++) {
-      var inOpen = (sch.open[day] || []).some(function (w) { return k >= w[0] && k < w[1]; });
-      var inShift = sch.blocked.some(function (b) { return b.day === day && k >= b.from && k < b.to; });
+      var inOpen = rOpen.some(function (w) { return k >= w[0] && k < w[1]; });
+      var inShift = rBlocked.some(function (b) { return k >= b.from && k < b.to; });
       var inAway = sch.away.some(function (a) { return date >= a.from && date <= (a.to || a.from); });
       if (!inOpen || inShift || inAway) return json_({ ok: false, error: 'Sorry, that time is not available.' });
     }
@@ -112,8 +124,8 @@ function doPost(e) {
       pending++;
       if (String(res.rows[i][5]).trim().toLowerCase() === lc) mine++;
     }
-    if (mine >= 3) return json_({ ok: false, error: 'You already have requests waiting for Joe to confirm. Please wait for him to reply.' });
-    if (pending >= 60 || res.rows.length > 3000) return json_({ ok: false, error: 'Please contact Joe directly.' });
+    if (mine >= 3) return json_({ ok: false, error: 'You already have requests waiting for Coach Joe to confirm. Please wait for him to reply.' });
+    if (pending >= 60 || res.rows.length > 3000) return json_({ ok: false, error: 'Please contact Coach Joe directly.' });
 
     var sh = SpreadsheetApp.getActive().getSheetByName(SHEET), row = sh.getLastRow() + 1;
     // Name, contact and notes are stored as plain text, so a value starting with = + - or @ can never run as a formula.

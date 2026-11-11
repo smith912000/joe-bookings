@@ -1,14 +1,14 @@
 <!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>Bookings (Joe)</title><link rel="stylesheet" href="style.css"></head><body>
+<meta name="robots" content="noindex"><title>Bookings, Coach Joe</title><link rel="stylesheet" href="style.css"></head><body>
 <header><img id="logo" alt=""><div><h1 id="name"></h1><small id="sub">Your bookings</small></div></header>
 <main>
 <p><a class="btn" id="sheetlink" target="_blank" rel="noopener">Open my bookings sheet</a> <span class="note">New requests from customers arrive there as "Pending". Confirm, move or cancel them in the sheet; the calendar updates at once.</span></p>
-<p class="note">Optional: load your bookings (File &gt; Download &gt; CSV from the "Bookings" tab, or the last file you saved here), change things, then save. Nothing leaves your device until you paste/upload it.</p>
+<p class="note">You can also load a bookings CSV downloaded from the "Bookings" tab, change things, then save. Nothing leaves your device until you paste/upload it.</p>
 <div class="nav"><input type="file" id="f" accept=".csv"><button id="add">Add booking</button><button id="save">Save bookings CSV</button><button id="pub" class="sec">Save availability file</button></div>
 <div class="grid" id="cal"></div>
-<p class="note"><b>Your hours and days away are now in the "Schedule" tab of your bookings sheet.</b> Change them there and the customer calendar follows by itself. The schedule below is only a preview of the last saved file and no longer needs saving.</p>
-<h3>Weekly schedule (preview)</h3><p class="note">Open for PT = times clients can book. Shift / class = blocked. Change anything, then "Save schedule file". Away dates block whole days.</p>
-<table id="sc"><thead><tr><th>Day</th><th>Type</th><th>From (hour)</th><th>To (hour)</th><th>Label</th><th></th></tr></thead><tbody></tbody></table>
+<p class="note"><b>Your hours and days away are now in the "Schedule" tab of your bookings sheet.</b> Change them there and the customer calendar follows by itself. The usual week below is read from there, so it always matches the calendar. To change just one week, add rows in the Schedule tab with that week's Monday date in the "Week of" column.</p>
+<h3>Your usual week</h3><p class="note">Open for PT = times clients can book. Shift / class = blocked. Change anything, then "Save schedule file". Away dates block whole days.</p>
+<table id="sc"><thead><tr><th>Day</th><th>Type</th><th>From hour</th><th>To hour</th><th>Label</th><th></th></tr></thead><tbody></tbody></table>
 <div class="nav"><button id="addw" class="sec">Add time</button><button id="adda" class="sec">Add away dates</button><button id="savec">Save schedule file</button></div>
 <table id="aw"><thead><tr><th>Away from</th><th>to</th><th>Note</th><th></th></tr></thead><tbody></tbody></table>
 <h3>Bookings</h3><table id="t"><thead><tr><th>Date</th><th>Start</th><th>End</th><th>Client</th><th>Contact</th><th>Gym</th><th>Status</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
@@ -54,5 +54,5 @@ document.getElementById('f').onchange=async e=>{rows=toObjs(parseCSV(await e.tar
 document.getElementById('add').onclick=()=>{rows.push(Object.fromEntries(COLS.map(c=>[c,''])));const r=rows[rows.length-1];r['Booking ID']='B'+Date.now().toString(36);r.Status='Confirmed';draw()};
 document.getElementById('save').onclick=()=>dl('bookings.csv',[COLS.join(',')].concat(rows.map(r=>COLS.map(c=>esc(r[c]||'')).join(','))).join('\n')+'\n','text/csv');
 document.getElementById('pub').onclick=()=>dl('busy.json',JSON.stringify({updated:new Date().toLocaleString('en-GB'),busy:[...busySet()].sort()},null,1),'application/json');
-(async()=>{cfg=await loadConfig();document.getElementById('sheetlink').href=cfg.sheet_url;drawSched();try{rows=toObjs(parseCSV(await (await fetch('data/bookings.csv')).text()))}catch(e){}draw()})();
+(async()=>{cfg=await loadConfig();document.getElementById('sheetlink').href=cfg.sheet_url;try{applySchedule(cfg,await (await fetch(cfg.busy_url)).json())}catch(e){}drawSched();try{rows=toObjs(parseCSV(await (await fetch('data/bookings.csv')).text()))}catch(e){}draw()})();
 </script></body></html>

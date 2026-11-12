@@ -90,7 +90,12 @@ function doGet(e) {
 function saveSchedule_(d) {
   var ss = SpreadsheetApp.getActive(), ks = ss.getSheetByName('Admin link');
   var key = ks ? String(ks.getRange('B1').getValue()).trim() : '';
+  // Checked before any lock is taken, so a run of wrong keys can never hold up real bookings.
   if (key.length < 20 || String(d.key || '') !== key) { Utilities.sleep(1500); return json_({ ok: false, error: 'That link is not recognised. Open the link from your bookings sheet again.' }); }
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try { return writeSchedule_(ss, d); } finally { lock.releaseLock(); }
+}
+function writeSchedule_(ss, d) {
   var days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   var usual = Array.isArray(d.usual) ? d.usual : [], away = Array.isArray(d.away) ? d.away : [], ar = d.around || {};
   if (usual.length > 60 || away.length > 40) return json_({ ok: false, error: 'Too many rows.' });
@@ -130,10 +135,12 @@ function saveSchedule_(d) {
 }
 
 function doPost(e) {
+  var d0;
+  try { d0 = JSON.parse(e.postData.contents); } catch (err) { return json_({ ok: false, error: 'Could not read that.' }); }
+  if (d0 && d0.action === 'saveSchedule') return saveSchedule_(d0);   // Coach Joe's page, needs the key from his sheet; takes its own lock
   var lock = LockService.getScriptLock(); lock.waitLock(10000);
   try {
-    var d = JSON.parse(e.postData.contents);
-    if (d.action === 'saveSchedule') return saveSchedule_(d);        // Coach Joe's page, needs the key from his sheet
+    var d = d0;
     if (d.website) return json_({ ok: true });                     // honeypot
     var name = String(d.name || '').trim().slice(0, 80), contact = String(d.contact || '').trim().slice(0, 100);
     var note = String(d.note || '').trim().slice(0, 300), hours = Math.min(Math.max(parseInt(d.hours, 10) || 1, 1), 3);

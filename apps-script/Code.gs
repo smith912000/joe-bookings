@@ -9,6 +9,7 @@
  * Columns on "Bookings": Booking ID, Date, Start time, End time, Client, Contact, Gym, Status, Notes, Changed from.
  */
 var SHEET = 'Bookings';
+var EARLIEST = 7;   // earliest PT start hour (7am)
 
 function pad2(n) { return ('0' + n).slice(-2); }
 
@@ -64,7 +65,7 @@ function readSchedule_() {
     var wk = r[7] ? parseDate(r[7]) : null, kind = t === 'open' ? 'open' : (t === 'shift' || t === 'blocked') ? 'shift' : null;
     if (kind && day && a !== null && b !== null && b > a) {
       if (wk) { weeks.push({ week: wk, day: day, type: kind, from: a, to: b, label: r[6] || '' }); }
-      else if (kind === 'open') { (open[day] = open[day] || []).push([a, b]); }
+      else if (kind === 'open') { (open[day] = open[day] || []).push([a, b, r[6] || '']); }
       else { blocked.push({ day: day, from: a, to: b, label: r[6] || '' }); }
       n++;
     }
@@ -84,17 +85,69 @@ function doGet(e) {
   return json_(out);
 }
 
+// Coach Joe's page saves his usual week here. The key lives in the "Admin link" tab of his sheet (cell B1), which only
+// he and Brandon can open; customers never see it. Rows with a Week of date and the notes row are left as they are.
+function saveSchedule_(d) {
+  var ss = SpreadsheetApp.getActive(), ks = ss.getSheetByName('Admin link');
+  var key = ks ? String(ks.getRange('B1').getValue()).trim() : '';
+  // Checked before any lock is taken, so a run of wrong keys can never hold up real bookings.
+  if (key.length < 20 || String(d.key || '') !== key) { Utilities.sleep(1500); return json_({ ok: false, error: 'That link is not recognised. Open the link from your bookings sheet again.' }); }
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try { return writeSchedule_(ss, d); } finally { lock.releaseLock(); }
+}
+function writeSchedule_(ss, d) {
+  var days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  var usual = Array.isArray(d.usual) ? d.usual : [], away = Array.isArray(d.away) ? d.away : [], ar = d.around || {};
+  if (usual.length > 60 || away.length > 40) return json_({ ok: false, error: 'Too many rows.' });
+  var out = [];
+  for (var i = 0; i < usual.length; i++) {
+    var u = usual[i], type = u.type === 'Open' ? 'Open' : u.type === 'Shift' ? 'Shift' : null, di = days.indexOf(u.day);
+    var f = parseInt(u.from, 10), t = parseInt(u.to, 10);
+    if (!type || di < 0 || !(f >= 0 && f < 24) || !(t > f && t <= 24)) return json_({ ok: false, error: 'Row ' + (i + 1) + ' needs a day, a type and a start hour before the end hour.' });
+    out.push({ di: di, f: f, row: [type, u.day, f, t, '', '', String(u.label || '').trim().slice(0, 80), ''] });
+  }
+  out.sort(function (a, b) { return a.di - b.di || a.f - b.f; });
+  var rowsOut = out.map(function (o) { return o.row; });
+  var nb = Math.min(Math.max(parseInt(ar.before, 10) || 0, 0), 4), na = Math.min(Math.max(parseInt(ar.after, 10) || 0, 0), 4);
+  rowsOut.push(['PT before class', '', nb, '', '', '', 'Hours of PT just before every Boxing Academy class (0 switches it off)', '']);
+  rowsOut.push(['PT after class', '', na, '', '', '', 'Hours of PT just after every Boxing Academy class (0 switches it off)', '']);
+  for (var j = 0; j < away.length; j++) {
+    var a = parseDate(away[j].from || ''), b = parseDate(away[j].to || '') || a;
+    if (!a || b < a) return json_({ ok: false, error: 'Away row ' + (j + 1) + ' needs a first and last date.' });
+    rowsOut.push(['Away', '', '', '', a, b, String(away[j].note || '').trim().slice(0, 80), '']);
+  }
+  var sh = ss.getSheetByName('Schedule');
+  if (!sh) return json_({ ok: false, error: 'Schedule tab not found.' });
+  var old = sh.getDataRange().getDisplayValues(), keep = [], notes = [], managed = { 'open': 1, 'shift': 1, 'blocked': 1, 'away': 1, 'pt before class': 1, 'pt after class': 1 };
+  for (var k = 1; k < old.length; k++) {
+    var r = old[k].slice(0, 8); while (r.length < 8) r.push('');
+    var ty = String(r[0]).trim().toLowerCase();
+    if (!ty && !r[1] && !r[7]) continue;
+    if (managed[ty] && String(r[7]).trim()) keep.push(r);        // week-only rows stay
+    else if (!managed[ty]) notes.push(r);                          // the notes row stays, last
+  }
+  var all = rowsOut.concat(keep, notes);
+  if (old.length > 1) sh.getRange(2, 1, old.length - 1, 8).clearContent();
+  sh.getRange(2, 5, all.length, 3).setNumberFormat('@');                      // dates and labels as plain text
+  sh.getRange(2, 8, all.length, 1).setNumberFormat('@');
+  sh.getRange(2, 1, all.length, 8).setValues(all);
+  return json_({ ok: true, saved: rowsOut.length, updated: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm') });
+}
+
 function doPost(e) {
+  var d0;
+  try { d0 = JSON.parse(e.postData.contents); } catch (err) { return json_({ ok: false, error: 'Could not read that.' }); }
+  if (d0 && d0.action === 'saveSchedule') return saveSchedule_(d0);   // Coach Joe's page, needs the key from his sheet; takes its own lock
   var lock = LockService.getScriptLock(); lock.waitLock(10000);
   try {
-    var d = JSON.parse(e.postData.contents);
+    var d = d0;
     if (d.website) return json_({ ok: true });                     // honeypot
     var name = String(d.name || '').trim().slice(0, 80), contact = String(d.contact || '').trim().slice(0, 100);
     var note = String(d.note || '').trim().slice(0, 300), hours = Math.min(Math.max(parseInt(d.hours, 10) || 1, 1), 3);
     var m = String(d.slot || '').match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2})$/);
     if (!name || !contact || !m) return json_({ ok: false, error: 'Please give your name, contact and a time.' });
     var date = m[1] + '-' + m[2] + '-' + m[3], start = parseInt(m[4], 10);
-    if (start + hours > 24) return json_({ ok: false, error: 'Sorry, that time is not available.' });
+    if (start + hours > 24 || start < EARLIEST) return json_({ ok: false, error: 'Sorry, that time is not available. The earliest PT is 7am.' });
 
     // The slot must be one Joe offers: open window, not a shift or class, not an away date, in the future, within 8 weeks.
     var sch = readSchedule_();

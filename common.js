@@ -15,13 +15,14 @@ function dayRules(cfg,d){const day=DAYS[d.getDay()],wk=iso(mondayOf(d)),ov=(cfg.
   const bl=(cfg.blocked||[]).filter(b=>b.day===day);return{open:((cfg.open||{})[day]||[]).concat(aroundWindows(cfg,bl)),blocked:bl}}
 // is hour h on date d open for PT? open windows minus shifts/classes minus away dates
 function isOpen(cfg,d,h){const k=iso(d);
+  if(h<(cfg.earliest||0))return false;
   if((cfg.away||[]).some(a=>k>=a.from&&k<=(a.to||a.from)))return false;
   const r=dayRules(cfg,d);
   if(!r.open.some(w=>inRange(h,w[0],w[1])))return false;
   return !r.blocked.some(b=>inRange(h,b.from,b.to))}
 function hourRange(cfg){let lo=24,hi=0;const add=(a,b)=>{lo=Math.min(lo,a);hi=Math.max(hi,b)};
   Object.values(cfg.open).forEach(l=>l.forEach(w=>add(w[0],w[1])));(cfg.blocked||[]).forEach(b=>add(b.from,b.to));(cfg.weeks||[]).forEach(w=>add(w.from,w.to));aroundWindows(cfg,(cfg.blocked||[]).concat((cfg.weeks||[]).filter(w=>w.type==='shift'))).forEach(w=>add(w[0],w[1]));
-  return lo>hi?[7,20]:[lo,hi]}
+  lo=Math.max(lo,cfg.earliest||0);return lo>=hi?[7,20]:[lo,hi]}
 // busy = Set of (null while the live list is still loading: open slots show … and can't be tapped)
 // busy = Set of "YYYY-MM-DD HH"
 function renderWeek(el,cfg,busy,start,onFree){

@@ -1,80 +1,126 @@
 {
-  "name": "Runt Works",
-  "title": "Coach Joe · Personal Training",
-  "logo": "assets/logo.webp",
-  "signup_form": "https://smith912000.app.n8n.cloud/form/train-with-joe",
-  "weeks_ahead": 4,
-  "open": {
-    "Monday": [
-      [
-        17,
-        21
-      ]
-    ],
-    "Friday": [
-      [
-        11,
-        17
-      ]
-    ]
-  },
-  "blocked": [
-    {
-      "day": "Wednesday",
-      "from": 6,
-      "to": 10,
-      "label": "Pure Gym shift"
-    },
-    {
-      "day": "Thursday",
-      "from": 16,
-      "to": 20,
-      "label": "Pure Gym shift"
-    },
-    {
-      "day": "Friday",
-      "from": 6,
-      "to": 11,
-      "label": "Pure Gym shift"
-    },
-    {
-      "day": "Sunday",
-      "from": 8,
-      "to": 12,
-      "label": "Pure Gym shift"
-    },
-    {
-      "day": "Tuesday",
-      "from": 18,
-      "to": 19,
-      "label": "Boxing Academy teenage class"
-    },
-    {
-      "day": "Tuesday",
-      "from": 19,
-      "to": 20,
-      "label": "Boxing Academy mixed boxing class"
-    },
-    {
-      "day": "Wednesday",
-      "from": 19,
-      "to": 20,
-      "label": "Boxing Academy Muay Thai class"
-    },
-    {
-      "day": "Saturday",
-      "from": 9,
-      "to": 10,
-      "label": "Boxing Academy teenage class"
-    }
+ "name": "Runt Works",
+ "title": "Coach Joe \u00b7 Personal Training",
+ "logo": "assets/logo.webp",
+ "signup_form": "https://smith912000.app.n8n.cloud/form/train-with-joe",
+ "weeks_ahead": 4,
+ "open": {
+  "Monday": [
+   [
+    15,
+    20
+   ]
   ],
-  "away": [],
-  "booking_note": "Earliest PT is 7am. Booking more than one hour? If you're flexible on times, we'll line your sessions up back to back with Coach Joe's other PT clients that day so there are no gaps. Need to change a time later? Your details are remembered, so you only pick the new time.",
-  "busy_url": "https://script.google.com/macros/s/AKfycbwful3adle_fgcbwCkgKKRFj8JFRQKmqv98rob-qqlqpU9JYt0FHfaOStnHlPzkd57v/exec",
-  "sheet_url": "https://docs.google.com/spreadsheets/d/1yqFw61HKIi9mExjL1728QWx4wtS-RMVZ4W8W6fbIJ7c/edit",
-  "around": {
-    "before": 1,
-    "after": 1
+  "Tuesday": [
+   [
+    15,
+    18
+   ]
+  ],
+  "Wednesday": [
+   [
+    10,
+    12
+   ],
+   [
+    16,
+    19
+   ]
+  ],
+  "Thursday": [
+   [
+    7,
+    10
+   ]
+  ],
+  "Friday": [
+   [
+    11,
+    12
+   ],
+   [
+    16,
+    20
+   ]
+  ],
+  "Saturday": [
+   [
+    7,
+    9
+   ],
+   [
+    10,
+    14
+   ]
+  ],
+  "Sunday": [
+   [
+    7,
+    8
+   ],
+   [
+    12,
+    14
+   ]
+  ]
+ },
+ "blocked": [
+  {
+   "day": "Tuesday",
+   "from": 18,
+   "to": 19,
+   "label": "Boxing Academy teenage class"
   },
-  "earliest": 7
+  {
+   "day": "Tuesday",
+   "from": 19,
+   "to": 20,
+   "label": "Boxing Academy mixed boxing class"
+  },
+  {
+   "day": "Wednesday",
+   "from": 6,
+   "to": 10,
+   "label": "Pure Gym shift"
+  },
+  {
+   "day": "Wednesday",
+   "from": 19,
+   "to": 20,
+   "label": "Boxing Academy Muay Thai class"
+  },
+  {
+   "day": "Thursday",
+   "from": 16,
+   "to": 20,
+   "label": "Pure Gym shift"
+  },
+  {
+   "day": "Friday",
+   "from": 6,
+   "to": 10,
+   "label": "Pure Gym shift"
+  },
+  {
+   "day": "Saturday",
+   "from": 9,
+   "to": 10,
+   "label": "Boxing Academy teenage class"
+  },
+  {
+   "day": "Sunday",
+   "from": 8,
+   "to": 12,
+   "label": "Pure Gym shift"
+  }
+ ],
+ "away": [],
+ "booking_note": "Earliest PT is 7am. Booking more than one hour? If you're flexible on times, we'll line your sessions up back to back with Coach Joe's other PT clients that day so there are no gaps. Need to change a time later? Your details are remembered, so you only pick the new time.",
+ "busy_url": "https://script.google.com/macros/s/AKfycbwful3adle_fgcbwCkgKKRFj8JFRQKmqv98rob-qqlqpU9JYt0FHfaOStnHlPzkd57v/exec",
+ "sheet_url": "https://docs.google.com/spreadsheets/d/1yqFw61HKIi9mExjL1728QWx4wtS-RMVZ4W8W6fbIJ7c/edit",
+ "around": {
+  "before": 0,
+  "after": 0
+ },
+ "earliest": 7
 }

@@ -10,9 +10,6 @@
 <div class="grid" id="cal"></div>
 <p class="note" id="keymsg"></p>
 <div id="banner" class="note" hidden></div>
-<h3>PT slots around boxing classes</h3>
-<p class="note">Hours of PT opened just before and just after every Boxing Academy class. Set 0 to switch one off. Times that clash with a shift or another class stay blocked.</p>
-<p><label>Hours before a class <input type="number" id="ab" min="0" max="4" style="width:70px"></label> <label>Hours after a class <input type="number" id="aa" min="0" max="4" style="width:70px"></label></p>
 <h3>Your usual week</h3><p class="note">Open for PT is when clients can book. Shift or class is blocked out. This repeats every week by itself. Earliest PT is 7am. Change anything, then press Save. Customers see it straight away.</p>
 <table id="sc"><thead><tr><th>Day</th><th>Type</th><th>From hour</th><th>To hour</th><th>Label</th><th></th></tr></thead><tbody></tbody></table>
 <div class="nav"><button id="addw" class="sec">Add time</button><button id="adda" class="sec">Add days away</button><button id="savec">Save</button> <span id="savemsg" class="note" role="status"></span></div>
@@ -44,9 +41,9 @@ $('cprev').onclick=()=>{CW--;drawChart()};$('cnext').onclick=()=>{CW++;drawChart
 function drawSched(){const tb=document.querySelector('#sc tbody');tb.innerHTML='';
  L.forEach((w,i)=>{const tr=document.createElement('tr');
   const mk=el=>{const td=document.createElement('td');td.append(el);tr.append(td)};
-  const sd=document.createElement('select');DN.forEach(d=>sd.add(new Option(d,d)));sd.value=w.day;sd.onchange=()=>{w.day=sd.value;changed()};mk(sd);
+  const sd=document.createElement('select');DN.forEach(d=>sd.add(new Option(d,d)));sd.value=w.day;sd.onchange=()=>{w.day=sd.value;sortL();drawSched();changed()};mk(sd);
   const st=document.createElement('select');['Open for PT','Shift or class'].forEach(d=>st.add(new Option(d,d)));st.value=w.type;st.onchange=()=>{w.type=st.value;changed()};mk(st);
-  ['from','to'].forEach(f=>{const n=document.createElement('input');n.type='number';n.min=0;n.max=24;n.style.width='64px';n.value=w[f];n.oninput=()=>{w[f]=n.value;changed()};mk(n)});
+  ['from','to'].forEach(f=>{const n=document.createElement('input');n.type='number';n.min=0;n.max=24;n.style.width='64px';n.value=w[f];n.oninput=()=>{w[f]=n.value;changed()};if(f==='from')n.onchange=()=>{sortL();drawSched()};mk(n)});
   const lb=document.createElement('input');lb.value=w.label;lb.oninput=()=>{w.label=lb.value;changed()};mk(lb);
   const td=document.createElement('td');
   const sv=document.createElement('button');sv.textContent='Save';sv.onclick=save;
@@ -64,7 +61,7 @@ async function save(){const m=$('savemsg');
   if(j.ok){sortL();lsSet(DRAFT,null);setDirty(false);drawSched();toCfg();drawChart();$('banner').hidden=true;m.textContent='Saved at '+j.updated+'. Customers see it now.'}
   else m.textContent=j.error||'Could not save.'}
  catch(e){m.textContent='Could not reach the sheet. Your changes are kept on this device. Try Save again.'}}
-$('addw').onclick=()=>{L.push({day:'Monday',type:'Open for PT',from:17,to:21,label:''});drawSched();changed()};
+$('addw').onclick=()=>{L.push({day:'Monday',type:'Open for PT',from:15,to:20,label:''});sortL();drawSched();changed()};
 $('adda').onclick=()=>{AW.push({from:iso(new Date()),to:iso(new Date()),note:''});drawSched();changed()};
 $('savec').onclick=save;
 function parseCSV(s){const out=[];let r=[],c='',q=false;for(let i=0;i<s.length;i++){const ch=s[i];
@@ -98,8 +95,6 @@ document.getElementById('pub').onclick=()=>dl('busy.json',JSON.stringify({update
  try{const d=JSON.parse(lsGet(DRAFT)||'null');if(d&&d.L){L=d.L;AW=d.AW||[];AR=d.AR||AR;setDirty(true);toCfg();$('banner').hidden=false;
   $('banner').innerHTML='Your unsaved changes from '+new Date(d.ts).toLocaleString('en-GB')+' were put back. Press Save to publish them. <button class="sec" id="disc">Throw them away</button>';
   $('disc').onclick=()=>{lsSet(DRAFT,null);location.reload()}}}catch(e){}
- $('ab').value=AR.before;$('aa').value=AR.after;
- $('ab').oninput=e=>{AR.before=Math.min(4,Math.max(0,+e.target.value||0));changed()};$('aa').oninput=e=>{AR.after=Math.min(4,Math.max(0,+e.target.value||0));changed()};
  drawSched();
  try{rows=toObjs(parseCSV(await (await fetch('data/bookings.csv')).text()))}catch(e){}draw()})();
 </script></body></html>
